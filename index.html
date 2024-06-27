@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced To-Do List</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #e0f7fa;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #00796b;
+    }
+
+    form {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #00796b;
+      border-radius: 5px;
+      margin-right: 10px;
+    }
+
+    select {
+      padding: 10px;
+      border: 1px solid #00796b;
+      border-radius: 5px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #00796b;
+      border: none;
+      color: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #004d40;
+    }
+
+    .todo-container {
+      max-height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      padding: 10px;
+      background: #e0f7fa;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s;
+    }
+
+    li.completed {
+      background: #a5d6a7;
+      text-decoration: line-through;
+      color: #555;
+    }
+
+    li .delete {
+      background: #e57373;
+      border: none;
+      color: #fff;
+      padding: 5px 10px;
+      cursor: pointer;
+      border-radius: 5px;
+      margin-left: 5px;
+    }
+
+    li .delete:hover {
+      background: #c62828;
+    }
+
+    #filters {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+
+    .filter {
+      background: #00796b;
+      border: none;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .filter:hover, .filter.active {
+      background: #004d40;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>To-Do List</h1>
+  <form id="todo-form">
+    <input type="text" id="new-todo" placeholder="Add a new task">
+    <input type="date" id="due-date">
+    <select id="priority">
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+    </select>
+    <button type="submit">Add</button>
+  </form>
+  <div class="todo-container">
+    <ul id="todo-list"></ul>
+  </div>
+  <div id="filters">
+    <button id="all" class="filter active">All</button>
+    <button id="completed" class="filter">Completed</button>
+    <button id="incomplete" class="filter">Incomplete</button>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('todo-form');
+    const todoInput = document.getElementById('new-todo');
+    const todoList = document.getElementById('todo-list');
+    const filters = document.getElementById('filters');
+    const filterButtons = document.querySelectorAll('.filter');
+
+    // Load tasks from local storage on page load
+    loadTasks();
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const todoText = todoInput.value.trim();
+      if (todoText !== '') {
+        const dueDate = document.getElementById('due-date').value;
+        const priority = document.getElementById('priority').value;
+        addTodo(todoText, dueDate, priority);
+        todoInput.value = '';
+        document.getElementById('due-date').value = '';
+        document.getElementById('priority').value = 'low';
+      }
+    });
+
+    filters.addEventListener('click', (e) => {
+      if (e.target.classList.contains('filter')) {
+        filterTodos(e.target.id);
+        filterButtons.forEach(btn => btn.classList.remove('active'));
+        e.target.classList.add('active');
+      }
+    });
+
+    function addTodo(todoText, dueDate, priority) {
+      const todo = {
+        text: todoText,
+        dueDate: dueDate,
+        priority: priority,
+        completed: false,
+        id: Date.now().toString() // Unique ID for each task
+      };
+
+      const li = document.createElement('li');
+      li.setAttribute('data-id', todo.id);
+      li.innerHTML = `
+        <span>${todo.text} - Due Date: ${todo.dueDate} - Priority: ${todo.priority}</span>
+        <button class="complete">Complete</button>
+        <button class="delete">Delete</button>
+      `;
+
+      const deleteButton = li.querySelector('.delete');
+      deleteButton.addEventListener('click', () => {
+        li.remove();
+        updateLocalStorage();
+      });
+
+      const completeButton = li.querySelector('.complete');
+      completeButton.addEventListener('click', () => {
+        todo.completed = !todo.completed;
+        li.classList.toggle('completed');
+        updateLocalStorage();
+      });
+
+      todoList.appendChild(li);
+      updateLocalStorage();
+    }
+
+    function filterTodos(filter) {
+      const todos = todoList.children;
+      for (let todo of todos) {
+        switch (filter) {
+          case 'all':
+            todo.style.display = 'flex';
+            break;
+          case 'completed':
+            todo.style.display = todo.classList.contains('completed') ? 'flex' : 'none';
+            break;
+          case 'incomplete':
+            todo.style.display = !todo.classList.contains('completed') ? 'flex' : 'none';
+            break;
+        }
+      }
+    }
+
+    function updateLocalStorage() {
+      const todos = [];
+      const todoElements = document.querySelectorAll('li');
+      todoElements.forEach(todoElement => {
+        todos.push({
+          id: todoElement.getAttribute('data-id'),
+          text: todoElement.querySelector('span').textContent,
+          dueDate: todoElement.querySelector('span').textContent.split(' - ')[1].substring(10),
+          priority: todoElement.querySelector('span').textContent.split(' - ')[2].substring(11),
+          completed: todoElement.classList.contains('completed')
+        });
+      });
+      localStorage.setItem('todos', JSON.stringify(todos));
+    }
+
+    function loadTasks() {
+      const todos = JSON.parse(localStorage.getItem('todos')) || [];
+      todos.forEach(todo => {
+        const li = document.createElement('li');
+        li.setAttribute('data-id', todo.id);
+        li.innerHTML = `
+          <span>${todo.text} - Due Date: ${todo.dueDate} - Priority: ${todo.priority}</span>
+          <button class="complete">${todo.completed ? 'Undo' : 'Complete'}</button>
+          <button class="delete">Delete</button>
+        `;
+        if (todo.completed) {
+          li.classList.add('completed');
+        }
+
+        const deleteButton = li.querySelector('.delete');
+        deleteButton.addEventListener('click', () => {
+          li.remove();
+          updateLocalStorage();
+        });
+
+        const completeButton = li.querySelector('.complete');
+        completeButton.addEventListener('click', () => {
+          todo.completed = !todo.completed;
+          li.classList.toggle('completed');
+          completeButton.textContent = todo.completed ? 'Undo' : 'Complete';
+          updateLocalStorage();
+        });
+
+        todoList.appendChild(li);
+      });
+    }
+  });
+</script>
+</body>
+</html>
